@@ -1,0 +1,30 @@
+# AIOStreams on the Hetzner box, built from this fork and served by the
+# Traefik already running there (network `traefik_proxy`, resolver
+# `mytlschallenge`). Secrets live in `.env` beside this file, which git ignores;
+# copy `.env.example` to start one. Deploy with `./deploy.sh`.
+name: aiostreams
+
+services:
+  aiostreams:
+    build:
+      context: ../..
+    image: aiostreams:fork
+    container_name: aiostreams
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    networks:
+      - traefik_proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.aiostreams.rule=Host(`${AIOSTREAMS_HOST:?set AIOSTREAMS_HOST in .env}`)
+      - traefik.http.routers.aiostreams.entrypoints=web,websecure
+      - traefik.http.routers.aiostreams.tls=true
+      - traefik.http.routers.aiostreams.tls.certresolver=mytlschallenge
+      - traefik.http.services.aiostreams.loadbalancer.server.port=3000
+
+networks:
+  traefik_proxy:
+    external: true
